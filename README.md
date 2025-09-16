@@ -24,20 +24,42 @@ Incluye gestión de productos, categorías y autenticación con JWT. El proyecto
 
  ## ⚙️ Tecnologías utilizadas
 
-NestJS
+- NestJS
  - framework principal.
 
-TypeScript
+- TypeScript
  - tipado estático.
 
-TypeORM
+- TypeORM
  - ORM para MySQL.
 
-class-validator
+- class-validator
  - validación de DTOs.
 
-Passport + JWT
- - autenticación.
+- Passport + JWT
+   - autenticación.
 
-Docker
- - contenedores para la app y base de datos.
+- Docker
+  - contenedores para la app y base de datos.
+
+
+---
+## INSTALACIÓN.
+
+# Clonar el repositorio
+git clone https://github.com/usuario/ecommerce-backend.git
+
+# Entrar en el proyecto
+cd ecommerce-backend
+
+# Instalar dependencias
+npm install
+
+# Ejecución.
+▶️ Ejecución
+# Desarrollo
+npm run start:dev
+
+# Producción
+* npm run build
+* npm run start:prod
