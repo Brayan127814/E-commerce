@@ -11,6 +11,9 @@ import { ProductosModule } from './productos/productos.module';
 import { CategoriasModule } from './categorias/categorias.module';
 import { Producto } from './productos/entities/producto.entity';
 import { Categoria } from './categorias/entities/categoria.entity';
+import { VentasModule } from './ventas/ventas.module';
+import { Venta } from './ventas/entities/venta.entity';
+import { DetalleVentas } from './ventas/entities/venta.detalles.entity';
 
 @Module({
   imports: [
@@ -28,7 +31,7 @@ import { Categoria } from './categorias/entities/categoria.entity';
         password: config.get<string>('BD_PASSWORD'),
         port: config.get<number>('BD_PORT'),
         database: config.get<string>('BD_DATABASE'),
-        entities: [Usuario, Roles, Producto, Categoria],
+        entities: [Usuario, Roles, Producto, Categoria, Venta,DetalleVentas],
         synchronize: false
 
       })
@@ -52,7 +55,12 @@ import { Categoria } from './categorias/entities/categoria.entity';
 
 
 
-    CategoriasModule],
+    CategoriasModule,
+
+
+
+
+    VentasModule],
   controllers: [AppController],
   providers: [AppService],
 })

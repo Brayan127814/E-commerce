@@ -27,7 +27,10 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({
     whitelist: false,             // elimina campos no definidos en el DTO
     forbidNonWhitelisted: true,  // lanza error si mandas un campo desconocido
-    transform: true,             // convierte los tipos (string → number, etc.)
+    transform: true,
+    transformOptions: {
+      enableImplicitConversion: true
+    }         // convierte los tipos (string → number, etc.)
   }));
 
   await app.listen(Envs.PORT);

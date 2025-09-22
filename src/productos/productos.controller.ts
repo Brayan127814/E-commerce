@@ -10,25 +10,28 @@ import { Roles } from 'src/decorators/roles.decorators';
 export class ProductosController {
   constructor(private readonly productosService: ProductosService) { }
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('Admin')
+  @Roles('admin')
   @Post('addProducto')
   async registerProducto(@Body() createProductoDto: CreateProductoDto) {
     return this.productosService.addProduct(createProductoDto);
   }
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('Admin')
+  @Roles('admin')
   @Get('all')
   async allProducto() {
     return this.productosService.findAll();
   }
+
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('Admin')
+
+
+  @Roles('admin')
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.productosService.findOne(+id);
   }
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('Admin')
+  @Roles('admin')
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateProductoDto: UpdateProductoDto) {
     return this.productosService.update(+id, updateProductoDto);

@@ -16,6 +16,7 @@ export class CreateProductoDto {
 
     @IsNumber()
     @Min(1,{message:'El estock debe ser almenos uno'})
+    
     public stock: number
 
     @IsNumber()
