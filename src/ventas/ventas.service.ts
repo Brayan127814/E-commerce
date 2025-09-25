@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, HttpException, HttpStatus, Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
 import { CreateVentaDto } from './dto/create-venta.dto';
 import { UpdateVentaDto } from './dto/update-venta.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -9,6 +9,10 @@ import { time, timeStamp } from 'console';
 import { Producto } from 'src/productos/entities/producto.entity';
 import { plainToInstance } from 'class-transformer';
 import { PaginationDto } from 'src/common/dto/pagination.query.dto';
+import { permisos } from 'src/helpers/validatorpermisos';
+import { ESTADOVENTA } from 'src/enum/ventas.enum';
+import { Http2ServerResponse } from 'http2';
+import { validarTransicion } from 'src/helpers/validarEstado';
 
 @Injectable()
 export class VentasService {
@@ -102,33 +106,42 @@ export class VentasService {
     }
   }
 
-  async confirmarVentas(estado: string): Promise<Venta[]> {
+  async confirmarVentas(estado: ESTADOVENTA, rol: string, usurioId: number): Promise<Venta[]> {
 
     try {
-      const ventasPendientes = await this.ventaRepository.find(
-        {
-          where: { estado },
-          relations: ['usuario', 'detalles', 'detalles.producto']
-        }
-      )
 
-      if (ventasPendientes.length === 0) {
+      let ventas: Venta[] = []
+      if (permisos(rol)) {
+        ventas = await this.ventaRepository.find(
+          {
+            where: { estado },
+            relations: ['usuario', 'detalles', 'detalles.producto']
+          }
+        )
+      } else {
+        if (estado != ESTADOVENTA.CONFIRMAR) {
+          throw new ForbiddenException(
+            'Los clientes solo pueden confirmar sus propias compras',
+          );
+
+        }
+        ventas = await this.ventaRepository.find({
+          where: { estado: ESTADOVENTA.PENDIENTE, usuario: { id: usurioId } }, relations: ['usuario', 'detalles', 'detalles.producto']
+        })
+      }
+
+
+      if (ventas.length === 0) {
         throw new NotFoundException('No hay ventas pendientes para confirmar');
       }
       const ventasConfirmadas: Venta[] = []
 
-      for (let venta of ventasPendientes) {
-        venta.estado = 'pagado'
+      for (let venta of ventas) {
+        venta.estado = ESTADOVENTA.CONFIRMAR
         await this.ventaRepository.save(venta)
         //Actualizar stock
-        for (let detalle of venta.detalles) {
-
-          const producto = detalle.producto
-          producto.stock -= detalle.cantidad
-          await this.productRepository.save(producto)
-
-          ventasConfirmadas.push(venta)
-        }
+        this.quitarStock(venta)
+        ventasConfirmadas.push(venta)
 
 
       }
@@ -160,12 +173,13 @@ export class VentasService {
       });
 
       if (ventas.length === 0) {
+
         throw new NotFoundException('No hay ventas');
       }
 
       return {
         page,
-        data: plainToInstance(Venta,ventas,{excludeExtraneousValues:true})
+        data: plainToInstance(Venta, ventas, { excludeExtraneousValues: true })
       };
     } catch (error) {
       Logger.error(error);
@@ -181,6 +195,82 @@ export class VentasService {
   }
 
 
+  //Cancelar venta
+  async updateEstadoVenta(ventaId: number, usurioId: number, rol: string, nuevoEstado: ESTADOVENTA) {
+
+    try {
+
+      let venta: Venta | null = null
+      //solo el admin puede cancelar la venta o el mismo usuario
+      if (permisos(rol)) {
+
+        venta = await this.ventaRepository.findOne({
+          where: { id: ventaId },
+          relations: ['usuario', 'detalles', 'detalles.producto']
+        })
+
+      } else {
+
+        //EL cliente solo puuede cancelar compra
+        if (nuevoEstado != ESTADOVENTA.CANCEL) {
+          throw new ForbiddenException(
+            'Los clientes solo pueden cancelar sus propias ventas',
+          );
+        }
+        venta = await this.ventaRepository.findOne({
+          where: {
+            id: ventaId,
+            usuario: { id: usurioId }
+          },
+          relations: ['usuario', 'detalles']
+        })
+      }
+
+      if (!venta) {
+        throw new NotFoundException(`Venta con ID ${ventaId} no está registrada en la base de datos`)
+      }
+
+      const estadoActual = venta.estado as ESTADOVENTA
+      if (!validarTransicion(estadoActual, nuevoEstado)) {
+
+        throw new BadRequestException(
+          `No se puede cambiar el estado de ${estadoActual} a ${nuevoEstado}`,
+        );
+      }
+
+      if (estadoActual === ESTADOVENTA.PAGADO && nuevoEstado === ESTADOVENTA.CANCEL) {
+        this.ponerStock(venta)
+      }
+
+      venta.estado = nuevoEstado
+
+      await this.ventaRepository.save(venta)
+
+      return venta
+    } catch (error) {
+
+      if (error instanceof HttpException) {
+        throw error
+      }
+
+      throw new HttpException('INTERNAL SERVER', HttpStatus.INTERNAL_SERVER_ERROR)
+
+    }
+  }
+  private async ponerStock(venta: Venta) {
+    for (let detalle of venta.detalles) {
+      const producto = detalle.producto
+      producto.stock += detalle.cantidad
+      await this.productRepository.save(producto)
+    }
+  }
+  private async quitarStock(venta: Venta) {
+    for (let detalle of venta.detalles) {
+      const producto = detalle.producto
+      producto.stock -= detalle.cantidad
+      await this.productRepository.save(producto)
+    }
+  }
 
 }
 

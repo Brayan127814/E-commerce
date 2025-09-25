@@ -1,5 +1,7 @@
 export enum ESTADOVENTA{
         CANCEL= 'cancelada',
         PAGADO ='pagado',
-        PENDIENTE='pendiente'
+        PENDIENTE='pendiente',
+        ENTREGADO= 'entregado',
+        CONFIRMAR='confirmado'
 }
